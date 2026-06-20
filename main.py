@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 import os
 import json
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 app = FastAPI()
 
@@ -29,7 +29,9 @@ class Task(BaseModel):
     # PyDantic class for consistent data and data validation
     name: str
     description: str | None = None
-    key: int
+    key: int = Field(gt=0) 
+    # PyDantic helper used to add validation rules and metadata
+    # gt: greater than
 
 @app.post("/add")
 def add_task(task: Task):
@@ -44,7 +46,7 @@ def add_task(task: Task):
             existing = {}
 
         tasks.truncate(0)
-        if str(task.key) not in existing and task.key > 0:
+        if str(task.key) not in existing:
             existing[str(task.key)] = {task.name : task.description}
             json.dump(existing, tasks, indent=4,sort_keys=True)
         else:
