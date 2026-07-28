@@ -24,37 +24,15 @@ def view_task(db: Session = Depends(get_db)):
     else:
         return tasks
 
-# class Task(BaseModel):
-#     # PyDantic class for consistent data and data validation
-#     name: str
-#     description: str | None = None
-#     key: int = Field(gt=0) 
-#     # PyDantic helper used to add validation rules and metadata
-#     # gt: greater than
+@app.post("/add")
+def add_task(task: Task, db: Session = Depends(get_db)):
+    task_meta = Task(name=task.name, description=task.description)
 
-# @app.post("/add")
-# def add_task(task: Task):
-#     # data = {
-#     #     task.key : { task.name : task.description }
-#     # }
-#     with open(file,"a+", encoding="utf-8") as tasks:
-#         tasks.seek(0)
-#         try:
-#             existing = json.load(tasks) # loads as a dict object
-#         except Exception as e:
-#             existing = {}
+    db.add(task_meta)
+    db.commit()
 
-#         tasks.truncate(0)
-#         if str(task.key) not in existing:
-#             existing[str(task.key)] = {task.name : task.description}
-#             json.dump(existing, tasks, indent=4,sort_keys=True)
-#         else:
-#             json.dump(existing, tasks, indent=4,sort_keys=True)
-#             raise HTTPException(status_code=409,detail="Task key already taken. Key must be unique and a positive integer.")
-        
-
-# class TaskID(BaseModel):
-#     key: int
+    statement = select(Task)
+    return db.exec(statement).all()
 
 # @app.post("/done/")
 # def delete_task(key: TaskID):
