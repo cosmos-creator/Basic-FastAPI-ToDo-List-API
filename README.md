@@ -1,14 +1,14 @@
 # Basic FastAPI To-Do List API
 
-A simple REST API built with FastAPI that allows users to create, view, and delete tasks. Tasks are stored in a local JSON file, making it a lightweight project for learning API development, file handling, and error handling in Python.
+A simple REST API built with FastAPI that allows users to create, view, and delete tasks. Tasks are stored in a local SQLite database using SQLModel, making it a lightweight project for learning API development, database integration, and error handling in Python.
 
 ## Features
 
 * Add new tasks
 * View all saved tasks
 * Delete tasks by ID
-* JSON-based storage
-* Input validation using Pydantic
+* SQLite-based storage via SQLModel
+* Input validation using Pydantic/SQLModel
 * HTTP error handling for common edge cases
 
 ## Installation
@@ -23,7 +23,7 @@ cd Basic-FastAPI-ToDo-List-API
 Install dependencies:
 
 ```bash
-pip install fastapi uvicorn
+pip install fastapi uvicorn sqlmodel
 ```
 
 ## Running the API
@@ -63,34 +63,27 @@ Example request body:
 ```json
 {
     "name": "Finish project",
-    "description": "Complete FastAPI To-Do API",
-    "key": 1
+    "description": "Complete FastAPI To-Do API"
 }
 ```
 
 ### Delete Task
 
-**POST /done/**
+**DELETE /delete?id=1**
 
-Example request body:
-
-```json
-{
-    "key": 1
-}
-```
+Deletes the task with the given ID. Pass the ID as a query parameter.
 
 ## Data Storage
 
-Tasks are stored in a local `tasks.json` file.
+Tasks are stored in a local `database.sqlite` file, auto-created on startup.
 
-Example structure:
+Example task structure:
 
 ```json
 {
-    "1": {
-        "Finish project": "Complete FastAPI To-Do API"
-    }
+    "id": 1,
+    "name": "Finish project",
+    "description": "Complete FastAPI To-Do API"
 }
 ```
 
@@ -98,25 +91,23 @@ Example structure:
 
 The API handles several common cases:
 
-* Missing task file
-* Duplicate task IDs
-* Invalid task IDs
-* Attempting to delete a task that does not exist
-* Empty or unreadable task data
+* Empty task list
+* Task not found on deletion
+* Invalid query parameters
 
 ## Technologies Used
 
 * Python
 * FastAPI
-* Pydantic
-* JSON
+* SQLModel
+* SQLite
 
 ## Purpose
 
 This project was built as a learning exercise to practice:
 
 * REST API development
+* Database integration with SQLModel
+* Dependency injection
 * Request validation
-* File operations
-* JSON data handling
 * HTTP status codes and error responses

@@ -11,7 +11,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-async def get_db():
+def get_db():
     with Session(engine) as session:
         yield session
 
@@ -20,7 +20,7 @@ def view_task(db: Session = Depends(get_db)):
     statement = select(Task)
     tasks = db.exec(statement).all()
     if not tasks:
-        raise HTTPException(status_code=200, detail="File was found but no tasks were there to show. Try adding new tasks.")
+        return []
     else:
         return tasks
 
