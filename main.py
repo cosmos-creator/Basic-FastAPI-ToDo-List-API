@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Query
 from contextlib import asynccontextmanager
 from database import create_db_tables, engine, Task
 from sqlmodel import select, Session
@@ -30,25 +30,22 @@ def add_task(task: Task, db: Session = Depends(get_db)):
 
     db.add(task_meta)
     db.commit()
+    db.refresh(task_meta)
 
-    statement = select(Task)
-    return db.exec(statement).all()
+    return task_meta
 
-# @app.post("/done/")
-# def delete_task(key: TaskID):
-    check_file()
-    with open(file,"a+", encoding="utf-8") as tasks:
-        tasks.seek(0)
-        try:
-            existing = json.load(tasks) # loads as a dict object
-        except Exception as e:
-            existing = {}
-        
-        tasks.truncate(0) # deltes file content, everything, makes file size 0
 
-        if str(key.key) in existing:
-            del existing[str(key.key)]
-            json.dump(existing, tasks, indent=4,sort_keys=True)
-        else:
-            json.dump(existing, tasks, indent=4,sort_keys=True)
-            raise HTTPException(status_code=404, detail="Task not found.")
+@app.delete("/done/")
+def delete_task(id: int = Query(gt=0, default=1), db: Session = Depends(get_db)):
+
+    statement = select(Task).where(Task.id == id)
+    result = db.exec(statement)
+    try:
+        task = result.one()
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="Task not found.")
+
+    db.delete(task)
+    db.commit()
+
+    return task
