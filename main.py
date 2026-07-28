@@ -35,7 +35,7 @@ def add_task(task: Task, db: Session = Depends(get_db)):
     return task_meta
 
 
-@app.delete("/done/")
+@app.delete("/delete")
 def delete_task(id: int = Query(gt=0, default=1), db: Session = Depends(get_db)):
 
     statement = select(Task).where(Task.id == id)
