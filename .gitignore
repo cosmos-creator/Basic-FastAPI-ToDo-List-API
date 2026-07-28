@@ -220,3 +220,8 @@ __marimo__/
 
 # json file
 *.json
+
+# sqlite
+*.sqlite
+*.sqlite3
+*.db

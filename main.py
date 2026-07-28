@@ -1,77 +1,51 @@
-from fastapi import FastAPI, HTTPException
-import os
-import json
-from pydantic import BaseModel, Field
+from fastapi import FastAPI, HTTPException, Depends, Query
+from contextlib import asynccontextmanager
+from database import create_db_tables, engine, Task
+from sqlmodel import select, Session
 
-app = FastAPI()
 
-cwd = os.getcwd()
-file = os.path.join(cwd, "tasks.json")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_db_tables()
+    yield
 
-def check_file():
-    # check whether file exists to even work with
-    
-    if not os.path.exists(file):
-        raise HTTPException(status_code=404,detail="file tasks.json not found. Add New Task to initialize.")
+app = FastAPI(lifespan=lifespan)
+
+async def get_db():
+    with Session(engine) as session:
+        yield session
 
 @app.get("/")
-def view_task():
-    check_file()
-    with open(file, 'r') as tasks:
-        try:
-            data = json.load(tasks)
-        except Exception as e:
-            raise HTTPException(status_code=200, detail="File was found but no tasks were there to show. Try adding new tasks.")
-        
-        return data
-
-class Task(BaseModel):
-    # PyDantic class for consistent data and data validation
-    name: str
-    description: str | None = None
-    key: int = Field(gt=0) 
-    # PyDantic helper used to add validation rules and metadata
-    # gt: greater than
+def view_task(db: Session = Depends(get_db)):
+    statement = select(Task)
+    tasks = db.exec(statement).all()
+    if not tasks:
+        raise HTTPException(status_code=200, detail="File was found but no tasks were there to show. Try adding new tasks.")
+    else:
+        return tasks
 
 @app.post("/add")
-def add_task(task: Task):
-    # data = {
-    #     task.key : { task.name : task.description }
-    # }
-    with open(file,"a+", encoding="utf-8") as tasks:
-        tasks.seek(0)
-        try:
-            existing = json.load(tasks) # loads as a dict object
-        except Exception as e:
-            existing = {}
+def add_task(task: Task, db: Session = Depends(get_db)):
+    task_meta = Task(name=task.name, description=task.description)
 
-        tasks.truncate(0)
-        if str(task.key) not in existing:
-            existing[str(task.key)] = {task.name : task.description}
-            json.dump(existing, tasks, indent=4,sort_keys=True)
-        else:
-            json.dump(existing, tasks, indent=4,sort_keys=True)
-            raise HTTPException(status_code=409,detail="Task key already taken. Key must be unique and a positive integer.")
-        
+    db.add(task_meta)
+    db.commit()
+    db.refresh(task_meta)
 
-class TaskID(BaseModel):
-    key: int
+    return task_meta
 
-@app.post("/done/")
-def delete_task(key: TaskID):
-    check_file()
-    with open(file,"a+", encoding="utf-8") as tasks:
-        tasks.seek(0)
-        try:
-            existing = json.load(tasks) # loads as a dict object
-        except Exception as e:
-            existing = {}
-        
-        tasks.truncate(0) # deltes file content, everything, makes file size 0
 
-        if str(key.key) in existing:
-            del existing[str(key.key)]
-            json.dump(existing, tasks, indent=4,sort_keys=True)
-        else:
-            json.dump(existing, tasks, indent=4,sort_keys=True)
-            raise HTTPException(status_code=404, detail="Task not found.")
+@app.delete("/done/")
+def delete_task(id: int = Query(gt=0, default=1), db: Session = Depends(get_db)):
+
+    statement = select(Task).where(Task.id == id)
+    result = db.exec(statement)
+    try:
+        task = result.one()
+    except Exception as e:
+        raise HTTPException(status_code=404, detail="Task not found.")
+
+    db.delete(task)
+    db.commit()
+
+    return task
