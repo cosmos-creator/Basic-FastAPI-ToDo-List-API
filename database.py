@@ -13,12 +13,4 @@ sqlite_url = f"sqlite:///{sqlite_file_name}"
 engine = create_engine(sqlite_url)
 
 def create_db_tables():
-
     SQLModel.metadata.create_all(engine)
-
-def main():
-    create_db_tables()
-# this is executed when we call/run the file with python app.py
-# and doesnt run when we import it
-if __name__ == "__main__":
-    main()
