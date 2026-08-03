@@ -33,6 +33,12 @@ def create_token(data: dict):
 
     return jwt.encode(data, SECRET_KEY, "HS256")
 
+def username_valid(username: str, db: Session):
+    statement = select(User).where(User.username == username)
+    result = db.exec(statement).first()
+
+    return result is None
+
 def get_current_user(token: str = Depends(oauth_scheme), db: Session = Depends(get_db)):
     try:
         data = jwt.decode(token, SECRET_KEY, "HS256")
@@ -55,6 +61,10 @@ class UserRegister(BaseModel):
 
 @app.post("/register")
 def register(user_data: UserRegister, db: Session = Depends(get_db)):
+
+    if not username_valid(user_data.username, db):
+        raise HTTPException(status_code=409, detail="username already taken")
+    
     hashed_password = hash_pass(user_data.password)
 
     statement = select(User)
