@@ -1,13 +1,45 @@
 from fastapi import FastAPI, HTTPException, Depends, Query
+from fastapi.security import OAuth2PasswordBearer
 from contextlib import asynccontextmanager
-from database import create_db_tables, engine, Task
+from database import create_db_tables, engine, Task, User
 from sqlmodel import select, Session
+from passlib.context import CryptContext
+from datetime import datetime, timezone, timedelta
+from jose import jwt
+import os
 
+# creates a bcrypt hashing tool
+pwd_context = CryptContext(schemes=["bcrypt"])
+TOKEN_TIME_IN_MIN = 30
+SECRET_KEY = os.getenv("SECRET_KEY") # shh its a secret
+oauth_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_db_tables()
     yield
+
+def hash_pass(password: str):
+    return pwd_context.hash(password)
+
+def create_token(data: dict):
+    valid_till = datetime.now(timezone.utc) + timedelta(minutes=TOKEN_TIME_IN_MIN)
+    data["exp"] = valid_till
+
+    return jwt.encode(data, SECRET_KEY, "HS256")
+
+def get_current_user(token: str = Depends(oauth_scheme), db: Session = Depends(get_db)):
+    try:
+        data = jwt.decode(token, SECRET_KEY, "HS256")
+        username = data["sub"]
+
+        statement = select(User).where(User.username == username)
+        result = db.exec(statement).first()
+
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="invalid token")
+
 
 app = FastAPI(lifespan=lifespan)
 
