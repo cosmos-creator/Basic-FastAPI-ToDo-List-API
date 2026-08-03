@@ -16,7 +16,7 @@ class Task(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id")
 
 sqlite_file_name = "database.sqlite"
-sqlite_url = f"sqlite:///.{sqlite_file_name}"
+sqlite_url = f"sqlite:///{sqlite_file_name}"
 
 # holds network connections to the db
 engine = create_engine(sqlite_url)
