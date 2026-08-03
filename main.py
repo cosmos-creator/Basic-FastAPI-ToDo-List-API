@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends, Query
 from fastapi.security import OAuth2PasswordBearer
+from pydantic import BaseModel
 from contextlib import asynccontextmanager
 from database import create_db_tables, engine, Task, User
 from sqlmodel import select, Session
@@ -18,6 +19,10 @@ oauth_scheme = OAuth2PasswordBearer(tokenUrl="login")
 async def lifespan(app: FastAPI):
     create_db_tables()
     yield
+
+def get_db():
+    with Session(engine) as session:
+        yield session
 
 def hash_pass(password: str):
     return pwd_context.hash(password)
@@ -43,9 +48,27 @@ def get_current_user(token: str = Depends(oauth_scheme), db: Session = Depends(g
 
 app = FastAPI(lifespan=lifespan)
 
-def get_db():
-    with Session(engine) as session:
-        yield session
+
+class UserRegister(BaseModel):
+    username: str
+    password: str
+
+@app.post("/register")
+def register(user_data: UserRegister, db: Session = Depends(get_db)):
+    hashed_password = hash_pass(user_data.password)
+
+    statement = select(User)
+    user = User(username=user_data.username, password=hashed_password)
+
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "username": user.username,
+        "password": user.password
+    }
+    
 
 @app.get("/")
 def view_task(db: Session = Depends(get_db)):
