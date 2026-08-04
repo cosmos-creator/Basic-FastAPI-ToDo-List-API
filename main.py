@@ -61,6 +61,15 @@ class UserRegister(BaseModel):
     username: str
     password: str
 
+class TaskMeta(BaseModel):
+    name: str
+    description: str
+
+class TaskResponse(BaseModel):
+    id: int
+    name: str
+    description: str | None = None
+
 @app.post("/register")
 def register(user_data: UserRegister, db: Session = Depends(get_db)):
 
@@ -98,9 +107,10 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         "token_type": "bearer"
         }
 
-@app.get("/")
-def view_task(db: Session = Depends(get_db)):
-    statement = select(Task)
+@app.get("/", response_model=list[TaskResponse])
+def view_task(current_user: User = Depends(get_current_user) ,db: Session = Depends(get_db)):
+
+    statement = select(Task).where(Task.user_id == current_user.id)
     tasks = db.exec(statement).all()
     if not tasks:
         return []
@@ -108,25 +118,31 @@ def view_task(db: Session = Depends(get_db)):
         return tasks
 
 @app.post("/add")
-def add_task(task: Task, db: Session = Depends(get_db)):
-    task_meta = Task(name=task.name, description=task.description)
-
+def add_task(task: TaskMeta, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    task_meta = Task(name=task.name, description=task.description, user_id=current_user.id)
+    
     db.add(task_meta)
     db.commit()
     db.refresh(task_meta)
 
-    return task_meta
+    return {
+        "name": task_meta.name,
+        "description": task_meta.description
+    }
 
 
 @app.delete("/delete")
-def delete_task(id: int = Query(gt=0, default=1), db: Session = Depends(get_db)):
+def delete_task(current_user: User = Depends(get_current_user), id: int = Query(gt=0, default=1), db: Session = Depends(get_db)):
 
     statement = select(Task).where(Task.id == id)
-    result = db.exec(statement)
+
     try:
-        task = result.one()
+        task = db.exec(statement).one()
     except Exception as e:
         raise HTTPException(status_code=404, detail="Task not found.")
+
+    if task.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You do not have permission to delete this task.")
 
     db.delete(task)
     db.commit()
