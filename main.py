@@ -67,7 +67,6 @@ def register(user_data: UserRegister, db: Session = Depends(get_db)):
     
     hashed_password = hash_pass(user_data.password)
 
-    statement = select(User)
     user = User(username=user_data.username, password=hashed_password)
 
     db.add(user)
@@ -75,8 +74,7 @@ def register(user_data: UserRegister, db: Session = Depends(get_db)):
     db.refresh(user)
 
     return {
-        "username": user.username,
-        "password": user.password
+        "response": f"{user.username} created successfully"
     }
     
 
