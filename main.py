@@ -148,3 +148,23 @@ def delete_task(current_user: User = Depends(get_current_user), id: int = Query(
     db.commit()
 
     return task
+
+
+@app.put("/update/{id}", response_model=TaskResponse)
+def update(id: int, task_updated: TaskMeta, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    statement = select(Task).where(Task.id == id)
+
+    try:
+        task = db.exec(statement).one()
+    except Exception as e:
+        raise HTTPException(404, detail="Task not found.")
+    if task.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You do not have permission to edit this task.")
+
+    task.name = task_updated.name
+    task.description = task_updated.description
+
+    db.commit()
+    db.refresh(task)
+
+    return task
