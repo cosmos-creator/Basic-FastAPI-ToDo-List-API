@@ -1,15 +1,16 @@
-# Basic FastAPI To-Do List API
+# FastAPI To-Do List API
 
-A simple REST API built with FastAPI that allows users to create, view, and delete tasks. Tasks are stored in a local SQLite database using SQLModel, making it a lightweight project for learning API development, database integration, and error handling in Python.
+A REST API built with FastAPI that allows users to register, log in, and manage their own tasks. Each user can only view and manage tasks they created. Tasks are stored in a local SQLite database using SQLModel.
 
 ## Features
 
-* Add new tasks
-* View all saved tasks
-* Delete tasks by ID
-* SQLite-based storage via SQLModel
-* Input validation using Pydantic/SQLModel
-* HTTP error handling for common edge cases
+* User registration and login
+* JWT-based authentication
+* Per-user task isolation
+* Add, view, and delete tasks
+* SQLite storage via SQLModel
+* Input validation using Pydantic
+* HTTP error handling
 
 ## Installation
 
@@ -23,42 +24,43 @@ cd Basic-FastAPI-ToDo-List-API
 Install dependencies:
 
 ```bash
-pip install fastapi uvicorn sqlmodel
+pip install fastapi uvicorn sqlmodel passlib[bcrypt] python-jose[cryptography] python-dotenv python-multipart
+```
+
+Set up your `.env` file:
+
+```
+SECRET_KEY=your_secret_key_here
 ```
 
 ## Running the API
-
-Start the server:
 
 ```bash
 uvicorn main:app --reload
 ```
 
-The API will be available at:
-
-```
-http://127.0.0.1:8000
-```
-
-Interactive documentation:
-
-```
-http://127.0.0.1:8000/docs
-```
+Available at `http://127.0.0.1:8000` — interactive docs at `http://127.0.0.1:8000/docs`
 
 ## API Endpoints
 
-### View Tasks
+### Auth
 
-**GET /**
+**POST /register** — Create a new account
 
-Returns all saved tasks.
+```json
+{
+    "username": "javed",
+    "password": "yourpassword"
+}
+```
 
-### Add Task
+**POST /login** — Returns a JWT token (use the Authorize button in `/docs`)
 
-**POST /add**
+### Tasks (require authentication)
 
-Example request body:
+**GET /** — Returns all tasks belonging to the logged-in user
+
+**POST /add** — Add a new task
 
 ```json
 {
@@ -67,33 +69,22 @@ Example request body:
 }
 ```
 
-### Delete Task
+**DELETE /delete?id=1** — Delete a task by ID (only if it belongs to you)
 
-**DELETE /delete?id=1**
+## Authentication Flow
 
-Deletes the task with the given ID. Pass the ID as a query parameter.
-
-## Data Storage
-
-Tasks are stored in a local `database.sqlite` file, auto-created on startup.
-
-Example task structure:
-
-```json
-{
-    "id": 1,
-    "name": "Finish project",
-    "description": "Complete FastAPI To-Do API"
-}
-```
+1. Register via `POST /register`
+2. Log in via the **Authorize** button in `/docs`
+3. All task routes are protected — requests without a valid token are rejected with 401
 
 ## Error Handling
 
-The API handles several common cases:
-
-* Empty task list
-* Task not found on deletion
-* Invalid query parameters
+| Status | Reason |
+|--------|--------|
+| 401 | Invalid credentials or missing/expired token |
+| 403 | Attempting to delete another user's task |
+| 404 | Task not found |
+| 409 | Username already taken |
 
 ## Technologies Used
 
@@ -101,13 +92,15 @@ The API handles several common cases:
 * FastAPI
 * SQLModel
 * SQLite
+* JWT (python-jose)
+* passlib (bcrypt)
 
 ## Purpose
 
-This project was built as a learning exercise to practice:
+Built as a learning project to practice:
 
 * REST API development
+* JWT authentication
 * Database integration with SQLModel
 * Dependency injection
-* Request validation
-* HTTP status codes and error responses
+* Per-user data isolation
