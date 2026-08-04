@@ -7,7 +7,7 @@ A REST API built with FastAPI that allows users to register, log in, and manage 
 * User registration and login
 * JWT-based authentication
 * Per-user task isolation
-* Add, view, and delete tasks
+* Add, view, update, and delete tasks
 * SQLite storage via SQLModel
 * Input validation using Pydantic
 * HTTP error handling
@@ -49,7 +49,7 @@ Available at `http://127.0.0.1:8000` — interactive docs at `http://127.0.0.1:8
 
 ```json
 {
-    "username": "javed",
+    "username": "cosmos-creator",
     "password": "yourpassword"
 }
 ```
@@ -69,6 +69,15 @@ Available at `http://127.0.0.1:8000` — interactive docs at `http://127.0.0.1:8
 }
 ```
 
+**PUT /update/{id}** — Update an existing task by ID
+
+```json
+{
+    "name": "Updated task name",
+    "description": "Updated description"
+}
+```
+
 **DELETE /delete?id=1** — Delete a task by ID (only if it belongs to you)
 
 ## Authentication Flow
@@ -82,7 +91,7 @@ Available at `http://127.0.0.1:8000` — interactive docs at `http://127.0.0.1:8
 | Status | Reason |
 |--------|--------|
 | 401 | Invalid credentials or missing/expired token |
-| 403 | Attempting to delete another user's task |
+| 403 | Attempting to modify another user's task |
 | 404 | Task not found |
 | 409 | Username already taken |
 
