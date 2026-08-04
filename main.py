@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends, Query
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 from database import create_db_tables, engine, Task, User
@@ -7,8 +7,10 @@ from sqlmodel import select, Session
 from passlib.context import CryptContext
 from datetime import datetime, timezone, timedelta
 from jose import jwt
+from dotenv import load_dotenv
 import os
 
+load_dotenv()
 # creates a bcrypt hashing tool
 pwd_context = CryptContext(schemes=["bcrypt"])
 TOKEN_TIME_IN_MIN = 30
@@ -76,7 +78,25 @@ def register(user_data: UserRegister, db: Session = Depends(get_db)):
     return {
         "response": f"{user.username} created successfully"
     }
-    
+
+@app.post("/login")
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+
+    # fetch user credentails from db
+    statement = select(User).where(User.username == form_data.username)
+    user = db.exec(statement).first()
+
+    # if password is invalid
+    if user is None or not pwd_context.verify(form_data.password, user.password):
+        raise HTTPException(status_code=401, detail="username or password incorrect")
+
+    # ...
+    token = create_token({"sub": user.username})
+
+    return {
+        "access_token": token, 
+        "token_type": "bearer"
+        }
 
 @app.get("/")
 def view_task(db: Session = Depends(get_db)):
